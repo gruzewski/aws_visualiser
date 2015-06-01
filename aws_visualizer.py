@@ -32,7 +32,7 @@ class Instance(object):
         self.platform = instance.platform
 
     def tuple_info(self):
-        table = [(self.name, self.id, self.state, self.vpc_id, self.az, self.platform, self.groups, self.public_dns, self.public_ip, self.type)]
+        table = (self.name, self.id, self.state, self.vpc_id, self.az, self.platform, self.groups, self.public_dns, self.public_ip, self.type)
         return table
 
     def __str__(self):
@@ -41,82 +41,54 @@ class Instance(object):
 
 # ---------------------   Methods   ----------------------------
 
-def get_regions():
+def get_public_regions():
     raw_regions = [str(region).split(':')[1] for region in ec2.regions()]
 
     regions = list(raw_regions)
 
     pattern_gov = re.compile("us-gov.*")
-    [regions.remove(region) for region in raw_regions if pattern_gov.match(region)]
+    pattern_china = re.compile("cn-*")
+
+    [regions.remove(region) for region in raw_regions if pattern_gov.match(region) or pattern_china.match(region)]
 
     return regions
 
-"""def get_ec2_instances(region):
+def get_ec2_instances():
 
-    regions = ec2.regions()
+    regions = get_public_regions()
+
     ec2_instances = dict()
 
     for region in regions:
+
         ec2_conn = ec2.connect_to_region(region,
-                                                aws_access_key_id=getattr(aws_config, "access_key"),
-                                                aws_secret_access_key=getattr(aws_config, "secret_key"))
+                                         aws_access_key_id=getattr(aws_config, "access_key"),
+                                         aws_secret_access_key=getattr(aws_config, "secret_key"))
         if ec2_conn is not None:
             instances = ec2_conn.get_only_instances()
 
-    reservations = ec2_conn.get_all_reservations()
-    for reservation in reservations:
-        print region+':',reservation.instances
+        ec2_instances[region] = [Instance(instance).tuple_info() for instance in instances]
 
-"""
-
-regions = get_regions()
-
-print regions
-
-for region in regions:
-
-    print region
-    ec2_conn = ec2.connect_to_region(region,
-                                     aws_access_key_id=getattr(aws_config, "access_key"),
-                                     aws_secret_access_key=getattr(aws_config, "secret_key"))
-   # if ec2_conn is not None:
-    instances = ec2_conn.get_only_instances()
-
-    #for instance in instances:
-    #    print region+':',instances.instances
+    return ec2_instances
 
 
+def print_ec2_instances(instances_list):
+    for key, value in instances_list.items():
+        if value:
+            print(key + ":\n")
+            print(tabulate(value, headers=["Name", "Instance ID", "State", "VPC ID", "AZ", "Platform", "Security groups", "Public DNS", "Public IP", "Type"]))
+            print("\n")
+        else:
+            print(key + ": No instances.")
+        #print(type(value))
 
-ec2_conn = ec2.connect_to_region("us-east-1",
-                                       aws_access_key_id=getattr(aws_config, "access_key"),
-                                       aws_secret_access_key=getattr(aws_config, "secret_key"))
+print_ec2_instances(get_ec2_instances())
 
-instances = ec2_conn.get_only_instances()
-sec_groups = ec2_conn.get_all_security_groups()
-
-
-
-
-instance_object = Instance(instances[0])
-print instance_object.__str__()
-
-#table = [(str(instance).split(':')[1], instance.state, instance.vpc_id, instance.placement) for instance in instances]
-
-#print type (table)
-#for instance in instances:
-#    print instance.vpc_id
-
-#print tabulate(table, headers=["Instance ID", "State", "VPC ID", "AZ"])
-
-
+#sec_groups = ec2_conn.get_all_security_groups()
 
 #Connecting to VPC
-vpc_conn = connect_vpc(aws_access_key_id=getattr(aws_config, "access_key"),
-                            aws_secret_access_key=getattr(aws_config, "secret_key"))
-vpcs = vpc_conn.get_all_vpcs()
-print vpcs
-
-#for instance in reservations:
-#    for instance1 in instance.instances:
-#        print str(instance1) + ' - ' + (instance1.state)
+#vpc_conn = connect_vpc(aws_access_key_id=getattr(aws_config, "access_key"),
+#                            aws_secret_access_key=getattr(aws_config, "secret_key"))
+#vpcs = vpc_conn.get_all_vpcs()
+#print(vpcs)
 
