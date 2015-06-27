@@ -32,11 +32,14 @@ class Instance(object):
         self.platform = instance.platform
 
     def tuple_info(self):
-        table = (self.name, self.id, self.state, self.vpc_id, self.az, self.platform, self.groups, self.public_dns, self.public_ip, self.type)
+        table = (self.name, self.id, self.state, self.vpc_id, self.az, self.platform, self._get_groups(), self.public_dns, self.public_ip, self.type)
         return table
 
+    def _get_groups(self):
+        return [str("%s [%s]" % (sg.name, sg.id)) for sg in self.groups]
+
     def __str__(self):
-        table = [(self.name, self.id, self.state, self.vpc_id, self.az, self.platform, self.groups, self.public_dns, self.public_ip, self.type)]
+        table = [(self.name, self.id, self.state, self.vpc_id, self.az, self.platform, self._get_groups(), self.public_dns, self.public_ip, self.type)]
         return tabulate(table, headers=["Name", "Instance ID", "State", "VPC ID", "AZ", "Platform", "Security groups", "Public DNS", "Public IP", "Type"])
 
 # ---------------------   Methods   ----------------------------
@@ -71,7 +74,6 @@ def get_ec2_instances():
 
     return ec2_instances
 
-
 def print_ec2_instances(instances_list):
     for key, value in instances_list.items():
         if value:
@@ -80,11 +82,21 @@ def print_ec2_instances(instances_list):
             print("\n")
         else:
             print(key + ": No instances.")
-        #print(type(value))
 
 print_ec2_instances(get_ec2_instances())
 
-#sec_groups = ec2_conn.get_all_security_groups()
+ec2_conn = ec2.connect_to_region("eu-west-1",
+                                 aws_access_key_id=getattr(aws_config, "access_key"),
+                                 aws_secret_access_key=getattr(aws_config, "secret_key"))
+
+if ec2_conn is not None:
+    sec_groups = ec2_conn.get_all_security_groups()
+
+#[print(sec_group) for sec_group in sec_groups]
+
+for sg in sec_groups:
+    print("%s [%s]" % (sg.name, sg.id))
+    [print("-- from %s to %s granted for %s" % (rule.from_port, rule.to_port, ",".join([str(ip) for ip in rule.grants]))) for rule in sg.rules]
 
 #Connecting to VPC
 #vpc_conn = connect_vpc(aws_access_key_id=getattr(aws_config, "access_key"),
