@@ -32,11 +32,21 @@ class Instance(object):
         self.platform = instance.platform
 
     def tuple_info(self):
-        table = (self.name, self.id, self.state, self.vpc_id, self.az, self.platform, self._get_groups(), self.public_dns, self.public_ip, self.type)
-        return table
+        return (
+            self.name,
+            self.id,
+            self.state,
+            self.vpc_id,
+            self.az,
+            self.platform,
+            self._get_groups(),
+            self.public_dns,
+            self.public_ip,
+            self.type,
+        )
 
     def _get_groups(self):
-        return [str("%s [%s]" % (sg.name, sg.id)) for sg in self.groups]
+        return [str(f"{sg.name} [{sg.id}]") for sg in self.groups]
 
     def __str__(self):
         table = [(self.name, self.id, self.state, self.vpc_id, self.az, self.platform, self._get_groups(), self.public_dns, self.public_ip, self.type)]
@@ -60,7 +70,7 @@ def get_ec2_instances():
 
     regions = get_public_regions()
 
-    ec2_instances = dict()
+    ec2_instances = {}
 
     for region in regions:
 
@@ -81,7 +91,7 @@ def print_ec2_instances(instances_list):
             print(tabulate(value, headers=["Name", "Instance ID", "State", "VPC ID", "AZ", "Platform", "Security groups", "Public DNS", "Public IP", "Type"]))
             print("\n")
         else:
-            print(key + ": No instances.")
+            print(f"{key}: No instances.")
 
 print_ec2_instances(get_ec2_instances())
 
@@ -95,8 +105,13 @@ if ec2_conn is not None:
 #[print(sec_group) for sec_group in sec_groups]
 
 for sg in sec_groups:
-    print("%s [%s]" % (sg.name, sg.id))
-    [print("-- from %s to %s granted for %s" % (rule.from_port, rule.to_port, ",".join([str(ip) for ip in rule.grants]))) for rule in sg.rules]
+    print(f"{sg.name} [{sg.id}]")
+    [
+        print(
+            f'-- from {rule.from_port} to {rule.to_port} granted for {",".join([str(ip) for ip in rule.grants])}'
+        )
+        for rule in sg.rules
+    ]
 
 #Connecting to VPC
 #vpc_conn = connect_vpc(aws_access_key_id=getattr(aws_config, "access_key"),
